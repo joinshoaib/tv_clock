@@ -5,6 +5,7 @@
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:label="tv_clock"
@@ -60,7 +61,14 @@
         android:value="clockOverlay" />
 </service>
 
- 
+ <receiver
+    android:name=".BootReceiver"
+    android:enabled="true"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+    </intent-filter>
+</receiver>
 
     </application>
     <!-- Required to query activities that can process text, see:

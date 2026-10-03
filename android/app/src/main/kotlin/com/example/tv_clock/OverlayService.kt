@@ -41,6 +41,7 @@ class OverlayService : Service() {
     private var clockSize = 48f
     private var clockOpacity = 0.9f
     private var position = "topRight"
+    private var customColor: String? = null
 
     private val updateRunnable = object : Runnable {
         override fun run() {
@@ -67,7 +68,7 @@ class OverlayService : Service() {
             addAction(Intent.ACTION_SCREEN_OFF)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // Android 14+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(screenReceiver, filter)
@@ -75,13 +76,26 @@ class OverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent?.getSerializableExtra("settings", HashMap::class.java) as? HashMap<String, *>
-        } else {
-            @Suppress("DEPRECATION")
-            intent?.getSerializableExtra("settings") as? HashMap<String, *>
+        val prefs = getSharedPreferences("tv_clock_overlay", Context.MODE_PRIVATE)
+        val enabled = prefs.getBoolean("overlay_enabled", false)
+
+        if (!enabled && intent == null) {
+            stopSelf()
+            return START_NOT_STICKY
         }
-        applySettings(settings)
+
+        if (intent?.hasExtra("settings") == true) {
+            val settings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getSerializableExtra("settings", HashMap::class.java) as? HashMap<String, *>
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getSerializableExtra("settings") as? HashMap<String, *>
+            }
+            applySettings(settings)
+            saveSettingsToPrefs(settings)
+        } else {
+            loadSettingsFromPrefs()
+        }
 
         if (overlayView == null) {
             showOverlay()
@@ -96,7 +110,33 @@ class OverlayService : Service() {
         return START_STICKY
     }
 
-     private var customColor: String? = null
+    private fun saveSettingsToPrefs(settings: HashMap<String, *>?) {
+        if (settings == null) return
+        val prefs = getSharedPreferences("tv_clock_overlay", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putBoolean("is24HourFormat", settings["is24HourFormat"] as? Boolean ?: false)
+            putBoolean("showSeconds", settings["showSeconds"] as? Boolean ?: true)
+            putBoolean("showDate", settings["showDate"] as? Boolean ?: true)
+            putString("theme", settings["theme"] as? String ?: "white")
+            putFloat("size", ((settings["size"] as? Double)?.toFloat() ?: 48f))
+            putFloat("opacity", ((settings["opacity"] as? Double)?.toFloat() ?: 0.9f))
+            putString("position", settings["position"] as? String ?: "topRight")
+            putString("color", settings["color"] as? String ?: "default")
+            apply()
+        }
+    }
+
+    private fun loadSettingsFromPrefs() {
+        val prefs = getSharedPreferences("tv_clock_overlay", Context.MODE_PRIVATE)
+        is24HourFormat = prefs.getBoolean("is24HourFormat", false)
+        showSeconds = prefs.getBoolean("showSeconds", true)
+        showDate = prefs.getBoolean("showDate", true)
+        theme = prefs.getString("theme", "white") ?: "white"
+        clockSize = prefs.getFloat("size", 48f)
+        clockOpacity = prefs.getFloat("opacity", 0.9f)
+        position = prefs.getString("position", "topRight") ?: "topRight"
+        customColor = prefs.getString("color", "default")
+    }
 
     private fun applySettings(settings: HashMap<String, *>?) {
         if (settings == null) return

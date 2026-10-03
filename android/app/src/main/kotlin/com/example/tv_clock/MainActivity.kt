@@ -1,5 +1,6 @@
 package com.example.tv_clock
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -30,10 +31,11 @@ class MainActivity : FlutterActivity() {
                 "startOverlay" -> {
                     @Suppress("UNCHECKED_CAST")
                     val settings = call.arguments as? Map<String, Any>
-                    startOverlayService(settings)
+                    saveSettingsAndStart(settings)
                     result.success(true)
                 }
                 "stopOverlay" -> {
+                    clearOverlayEnabled()
                     stopOverlayService()
                     result.success(true)
                 }
@@ -61,7 +63,23 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun startOverlayService(settings: Map<String, Any>?) {
+    private fun saveSettingsAndStart(settings: Map<String, Any>?) {
+        val prefs = getSharedPreferences("tv_clock_overlay", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putBoolean("overlay_enabled", true)
+            if (settings != null) {
+                putBoolean("is24HourFormat", settings["is24HourFormat"] as? Boolean ?: false)
+                putBoolean("showSeconds", settings["showSeconds"] as? Boolean ?: true)
+                putBoolean("showDate", settings["showDate"] as? Boolean ?: true)
+                putString("theme", settings["theme"] as? String ?: "white")
+                putFloat("size", ((settings["size"] as? Double)?.toFloat() ?: 48f))
+                putFloat("opacity", ((settings["opacity"] as? Double)?.toFloat() ?: 0.9f))
+                putString("position", settings["position"] as? String ?: "topRight")
+                putString("color", settings["color"] as? String ?: "default")
+            }
+            apply()
+        }
+
         val intent = Intent(this, OverlayService::class.java).apply {
             putExtra("settings", HashMap(settings ?: emptyMap()))
         }
@@ -70,6 +88,11 @@ class MainActivity : FlutterActivity() {
         } else {
             startService(intent)
         }
+    }
+
+    private fun clearOverlayEnabled() {
+        val prefs = getSharedPreferences("tv_clock_overlay", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("overlay_enabled", false).apply()
     }
 
     private fun stopOverlayService() {
