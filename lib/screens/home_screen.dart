@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/settings_model.dart';
 import '../services/overlay_service.dart';
 import '../services/settings_service.dart';
@@ -48,10 +49,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _hasPermission = granted);
   }
 
-  Future<void> _requestPermission() async {
-    await OverlayService.requestPermission();
-  }
-
   Future<void> _toggleOverlay() async {
     if (_isOverlayRunning) {
       await OverlayService.stopOverlay();
@@ -61,7 +58,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _showPermissionDialog();
         return;
       }
-      // Reload fresh settings right before starting
       _settings = await SettingsService.loadSettings();
       await OverlayService.startOverlay(_settings.toMap());
       setState(() => _isOverlayRunning = true);
@@ -86,9 +82,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             label: 'Open Settings',
             onPressed: () {
               Navigator.of(ctx).pop();
-              _requestPermission();
+              OverlayService.requestPermission();
             },
           ),
+          const SizedBox(height: 12),
           TvButton(label: 'Cancel', onPressed: () => Navigator.of(ctx).pop()),
         ],
       ),
@@ -99,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
-    // Reload settings when returning from settings page
     _settings = await SettingsService.loadSettings();
     if (mounted) setState(() {});
   }
@@ -109,48 +105,63 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(48.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              const Text(
-                'TV Clock Overlay',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 42,
-                  fontWeight: FontWeight.bold,
+        child: Focus(
+          autofocus: true,
+          onKeyEvent: (_, event) {
+            if (event is KeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.goBack ||
+                  event.logicalKey == LogicalKeyboardKey.escape) {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                  return KeyEventResult.handled;
+                }
+              }
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(48.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                const Text(
+                  'TV Clock Overlay',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Status: ${_hasPermission ? "Permission granted" : "Permission required"}',
-                style: TextStyle(
-                  color: _hasPermission ? Colors.greenAccent : Colors.orange,
-                  fontSize: 20,
+                const SizedBox(height: 16),
+                Text(
+                  'Status: ${_hasPermission ? "Permission granted" : "Permission required"}',
+                  style: TextStyle(
+                    color: _hasPermission ? Colors.greenAccent : Colors.orange,
+                    fontSize: 20,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 60),
-              TvButton(
-                label: _isOverlayRunning ? 'Stop Overlay' : 'Start Overlay',
-                icon: _isOverlayRunning ? Icons.stop : Icons.play_arrow,
-                autofocus: true,
-                onPressed: _toggleOverlay,
-              ),
-              const SizedBox(height: 24),
-              TvButton(
-                label: 'Settings',
-                icon: Icons.settings,
-                onPressed: _openSettings,
-              ),
-              const Spacer(),
-              const Text(
-                'Use D-pad to navigate',
-                style: TextStyle(color: Colors.white38, fontSize: 16),
-              ),
-            ],
+                const SizedBox(height: 60),
+                TvButton(
+                  label: _isOverlayRunning ? 'Stop Overlay' : 'Start Overlay',
+                  icon: _isOverlayRunning ? Icons.stop : Icons.play_arrow,
+                  autofocus: true,
+                  onPressed: _toggleOverlay,
+                ),
+                const SizedBox(height: 24),
+                TvButton(
+                  label: 'Settings',
+                  icon: Icons.settings,
+                  onPressed: _openSettings,
+                ),
+                const Spacer(),
+                const Text(
+                  'Use D-pad to navigate',
+                  style: TextStyle(color: Colors.white38, fontSize: 16),
+                ),
+              ],
+            ),
           ),
         ),
       ),

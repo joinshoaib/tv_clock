@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/settings_model.dart';
 import '../services/settings_service.dart';
 import '../widgets/tv_button.dart';
+import '../widgets/tv_switch.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -61,26 +62,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildToggle(String label, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 20),
-          ),
-          Switch(
-            value: value,
-            onChanged: (v) => _update(() => onChanged(v)),
-            activeColor: Colors.deepPurple,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPositionSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'Position',
           style: TextStyle(color: Colors.white, fontSize: 20),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Wrap(
           spacing: 16,
           runSpacing: 16,
@@ -121,9 +102,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'Theme',
           style: TextStyle(color: Colors.white, fontSize: 20),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Wrap(
           spacing: 16,
+          runSpacing: 16,
           children: [
             _themeBtn('White', 'white'),
             _themeBtn('Black', 'black'),
@@ -151,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'Text Color',
           style: TextStyle(color: Colors.white, fontSize: 20),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Wrap(
           spacing: 16,
           runSpacing: 16,
@@ -187,7 +169,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: Border.all(
                   color: focused
                       ? Colors.white
-                      : (selected ? Colors.greenAccent : Colors.transparent),
+                      : selected
+                      ? Colors.greenAccent
+                      : Colors.transparent,
                   width: focused ? 4 : (selected ? 3 : 0),
                 ),
                 boxShadow: focused
@@ -212,23 +196,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ValueChanged<double> onChanged,
   ) {
     final divisionsCount = (max - min).toInt();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$label: ${value.toStringAsFixed(1)}',
-          style: const TextStyle(color: Colors.white, fontSize: 20),
-        ),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          divisions: divisionsCount > 0 ? divisionsCount : null,
-          onChanged: (v) => _update(() => onChanged(v)),
-          activeColor: Colors.deepPurple,
-          inactiveColor: Colors.white24,
-        ),
-      ],
+    return Focus(
+      child: Builder(
+        builder: (context) {
+          final focused = Focus.of(context).hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: focused ? Colors.white : Colors.transparent,
+                width: 3,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              color: focused
+                  ? Colors.deepPurple.withOpacity(0.2)
+                  : Colors.transparent,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$label: ${value.toStringAsFixed(1)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                ),
+                Slider(
+                  value: value,
+                  min: min,
+                  max: max,
+                  divisions: divisionsCount > 0 ? divisionsCount : null,
+                  onChanged: (v) => _update(() => onChanged(v)),
+                  activeColor: Colors.deepPurple,
+                  inactiveColor: Colors.white24,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -254,30 +259,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.all(48),
           children: [
             _buildSectionTitle('Clock'),
-            _buildToggle(
-              '24-Hour Format',
-              _settings.is24HourFormat,
-              (v) => _settings.is24HourFormat = v,
+            TvSwitch(
+              label: '24-Hour Format',
+              value: _settings.is24HourFormat,
+              onChanged: (v) => _update(() => _settings.is24HourFormat = v),
             ),
-            _buildToggle(
-              'Show Seconds',
-              _settings.showSeconds,
-              (v) => _settings.showSeconds = v,
+            TvSwitch(
+              label: 'Show Seconds',
+              value: _settings.showSeconds,
+              onChanged: (v) => _update(() => _settings.showSeconds = v),
             ),
-            _buildToggle(
-              'Show Date',
-              _settings.showDate,
-              (v) => _settings.showDate = v,
+            TvSwitch(
+              label: 'Show Date',
+              value: _settings.showDate,
+              onChanged: (v) => _update(() => _settings.showDate = v),
             ),
             _buildSectionTitle('Appearance'),
             _buildThemeSelector(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             _buildColorSelector(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             _buildSlider(
               'Size',
               _settings.size,
-              24,
+              10,
               96,
               (v) => _settings.size = v,
             ),
